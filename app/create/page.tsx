@@ -168,6 +168,7 @@ export default function CreatePage() {
                 </div>
 
                 <button
+  type="button"
                   onClick={() => {
                     if (name.trim() && from.trim()) {
                       nextStep(2);
@@ -618,23 +619,46 @@ export default function CreatePage() {
     const id = crypto.randomUUID();
     const photoUrls: string[] = [];
 
-    for (const file of photoFiles) {
-      const filePath = `${id}/${Date.now()}-${file.name}`;
+   for (const file of photoFiles) {
+  const formData = new FormData();
 
-      const { error: uploadError } = await supabase.storage
-        .from("photos")
-        .upload(filePath, file);
+  formData.append("file", file);
+  formData.append("surpriseId", id);
 
-      if (uploadError) {
-        console.error(uploadError);
-        alert(`Photo upload failed:\n${uploadError.message}`);
-        setCreating(false);
-        return;
-      }
+  const uploadResponse = await fetch("/api/upload", {
+    method: "POST",
+    body: formData,
+  });
 
-      photoUrls.push(filePath);
-    }
+  const uploadText = await uploadResponse.text();
 
+  let uploadResult: { error?: string; path?: string } = {};
+
+  try {
+    uploadResult = JSON.parse(uploadText);
+  } catch {
+    console.error("Upload server response:", uploadText);
+    alert(`Upload server error:\n${uploadText}`);
+    setCreating(false);
+    return;
+  }
+
+  if (!uploadResponse.ok) {
+    console.error(uploadResult);
+    alert(`Photo upload failed:\n${uploadResult.error}`);
+    setCreating(false);
+    return;
+  }
+
+  if (typeof uploadResult.path !== "string") {
+    console.error("Upload API did not return a valid path:", uploadResult);
+    alert("Photo upload failed. Please try again.");
+    setCreating(false);
+    return;
+  }
+
+  photoUrls.push(uploadResult.path);
+}
     const response = await fetch("/api/create", {
       method: "POST",
       headers: {
