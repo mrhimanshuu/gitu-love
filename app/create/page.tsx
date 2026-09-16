@@ -685,14 +685,31 @@ export default function CreatePage() {
       }),
     });
 
-    const result = await response.json();
+    const responseText = await response.text();
 
-    if (!response.ok) {
-      console.error(result);
-      alert(`Could not create surprise:\n${result.error}`);
-      setCreating(false);
-      return;
-    }
+let result: { error?: string } = {};
+
+try {
+  result = JSON.parse(responseText);
+} catch {
+  console.error("Create server response:", responseText);
+  alert(
+    `Could not create surprise.\nServer returned an unexpected response.`
+  );
+  setCreating(false);
+  return;
+}
+
+if (!response.ok) {
+  console.error(result);
+  alert(
+    `Could not create surprise:\n${
+      result.error || "Please try again."
+    }`
+  );
+  setCreating(false);
+  return;
+}
 
     window.location.href = `/s/${id}`;
   } catch (error) {
